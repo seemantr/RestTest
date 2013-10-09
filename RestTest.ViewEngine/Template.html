@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Starter Template for Bootstrap</title>
+
+        <!-- Bootstrap core CSS -->
+        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css" rel="stylesheet">
+    </head>
+
+    <body>
+        <div class="container bs-docs-container">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="bs-sidebar hidden-print" role="complementary">
+                        <ul class="nav bs-sidenav">
+                            <li class="sidebar-brand"><a href="#">Resources</a></li>
+                            @foreach (var resource in @Model.Resources){
+                            <li>
+                                <a href="#@resource.ResourceName">@resource.ResourceName</a>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-9" role="main">
+                    <div class="page-header">
+                        <h1>@Model.DocumentName
+                        </h1>
+                    </div>
+                    <div class="bs-docs-section">
+                        @for (var resourceIndex = 0; resourceIndex < Model.Resources.Count(); resourceIndex++)
+                        { 
+                            <div class="page-header">
+                                <h1 id="@Model.Resources[resourceIndex].ResourceName">@Model.Resources[resourceIndex].ResourceName</h1>
+                            </div>
+                            <h3>Description</h3>
+                            <p>@Model.Resources[resourceIndex].ResourceDescription</p>
+
+                            for(var uriIndex = 0; resourceIndex < Model.Resources[resourceIndex].Uris.Count(); uriIndex++) 
+                            {                     
+                                <div class="panel panel-default">
+                                    <div class="panel-heading">@Model.Resources[resourceIndex].Uris[uriIndex].Name</div>
+                                    <div class="panel-body">
+                                        <h2>@Model.Resources[resourceIndex].Uris[uriIndex].Name</h2>
+                                        <p>@Model.Resources[resourceIndex].Uris[uriIndex].Description</p>
+
+                                        <h3>Parameters</h3>
+                                        @for (var paramIndex = 0; paramIndex < Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams.Count(); paramIndex++)
+                                        { 
+                                            <dl>
+                                                <dt>@Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].Name</dt>
+                                                <dd>
+                                                    @Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].DataType
+                                                    @Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].DefaultValue
+                                                </dd>
+                                                <dd>@Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].Description</dd>
+                                            </dl>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }   
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bootstrap core JavaScript -->
+        <!-- Placed at the end of the document so the pages load faster -->
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"> </script>
+        <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"> </script>
+        <!-- Put this into a custom JavaScript file to make things more organized -->
+        <script>
+            $("#menu-toggle").click(function(e) {
+                e.preventDefault();
+                $("#wrapper").toggleClass("active");
+            });
+        </script>
+    </body>
+</html>

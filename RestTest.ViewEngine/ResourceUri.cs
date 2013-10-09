@@ -21,6 +21,7 @@
         public ResourceUri()
         {
             this.Examples = new List<ResourceExample>();
+            this.ResourceParams = new List<ResourceParam>();
         }
 
         #endregion

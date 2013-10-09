@@ -4,11 +4,11 @@
     {
         #region Public Properties
 
-        public int DataType { get; set; }
+        public string DataType { get; set; }
         public string DefaultValue { get; set; }
         public string Description { get; set; }
         public string Name { get; set; }
-        public bool Required { get; set; }
+        public string Required { get; set; }
 
         #endregion
     }

@@ -71,8 +71,20 @@ let kgKey    = (many1Chars (noneOf "\t\n].")) .>> spc
 let keygroup = blanks >>. brace (sepBy kgKey (lexeme ".")) |>> KeyGroup
 let document = blanks >>. many (keygroup <|> keyvalue .>> blanks)
 
+let generateParams(resource: ResourceUri, value: string) =
+    let lines = value.Split([|'\n'|], System.StringSplitOptions.RemoveEmptyEntries)
+    for line in lines do
+        let cols = line.Split([|','|], System.StringSplitOptions.None)
+        let param = new ResourceParam()
+        param.Name <- cols.[0]
+        param.DataType <- cols.[1]
+        param.DefaultValue <- cols.[2]
+        param.Required <- cols.[3]
+        param.Description <- cols.[4]
+        resource.ResourceParams.Add(param)
+
 let parse text =
-    let resource = new RestResource()
+    let rest = new RestDocument()
     let currentKg = ref []
     match run document text with
     | Success(tokens,_,_) ->
@@ -80,7 +92,13 @@ let parse text =
             match token with
             | KeyGroup kg ->
                 currentKg := kg 
+                
                 match kg.Item(0) with
+                | StartsWith "RESOURCE" ->
+                    let resource = new RestResource()
+                    resource.ResourceName <- kg.Item(0).Substring(9)
+                    rest.Resources.Add(resource)
+                    
                 | StartsWith "URI" ->
                     let uri = new ResourceUri()
                     uri.Name <- kg.Item(0).Substring(4)
@@ -90,35 +108,42 @@ let parse text =
                         | _ -> failwithf "Unsupported request method in : '%s'" uri.Name
                     
                     uri.Request <- uri.Name.Substring(uri.Name.IndexOf(' ')).Trim()
-                    resource.Uris.Add(uri)
+                    rest.Resources.Last().Uris.Add(uri)
                     
                 | StartsWith "EXAMPLE" ->
                     let resourceExample = new ResourceExample()
                     resourceExample.Name <- kg.Item(0).Substring(8)
-                    resource.Uris.Last().Examples.Add(resourceExample)
+                    rest.Resources.Last().Uris.Last().Examples.Add(resourceExample)
 
                 | _ -> ()
             | KeyValue (key,value) -> 
                 let currentKg = !currentKg
                 if currentKg.Any() then
                     match currentKg.[0] with
+                    | StartsWith "RESOURCE" ->
+                        match key with
+                        | "description" -> rest.Resources.Last().ResourceDescription <- unbox<string> value
+                        | "note" -> rest.Resources.Last().Note <- unbox<string> value
+                        | _ -> ()
                     | StartsWith "URI" ->
                         match key with
-                        | "description" -> resource.Uris.Last().Description <- unbox<string> value
-                        | "note" -> resource.Uris.Last().Note <- unbox<string> value
+                        | "description" -> rest.Resources.Last().Uris.Last().Description <- unbox<string> value
+                        | "note" -> rest.Resources.Last().Uris.Last().Note <- unbox<string> value
+                        | "params" -> generateParams(rest.Resources.Last().Uris.Last(), unbox<string> value)
                         | _ -> ()
                     | StartsWith "EXAMPLE" ->
                         match key with
-                        | "description" -> resource.Uris.Last().Examples.Last().Description <- unbox<string> value
-                        | "note" -> resource.Uris.Last().Examples.Last().Note <- unbox<string> value
+                        | "description" -> rest.Resources.Last().Uris.Last().Examples.Last().Description <- unbox<string> value
+                        | "note" -> rest.Resources.Last().Uris.Last().Examples.Last().Note <- unbox<string> value
                         | _ -> ()
 
                     | _ -> ()
 
                 // Pair belongs to the top level resource 
                 match key with
-                | "description" -> resource.ResourceDescription <- unbox<string> value
-                | "resource" -> resource.ResourceName <- unbox<string> value
+                | "description" -> rest.DocumentDescription <- unbox<string> value
+                | "name" -> rest.DocumentName <- unbox<string> value
+                | "version" -> rest.Version <- unbox<string> value
                 | _ -> ()
 
     | Failure(a, b, c) -> 
@@ -126,14 +151,19 @@ let parse text =
         Console.WriteLine(b)
         Console.WriteLine(c)
     
-    resource
+    rest
 
 let example = """
 url : "http://localhost:9800"
-resource : "document"
+name : "FlexSearch API documentation"
 description : "Creates a new index"
+version: "0.2.1"
 
 -------------------------------------------------------------------------
+[RESOURCE document]
+-------------------------------------------------------------------------
+description : "Creates a new index"
+
 [URI POST resource/{id}/{user}]
 -------------------------------------------------------------------------
 description : "Creates a new index"
@@ -141,6 +171,7 @@ note : "Use with care"
 params : "
 OpenIndex, int, required, false, open the newly created index 
 "
+
 statuscodes : "
 200, OK
 400, Invalid word supplied
@@ -181,4 +212,5 @@ exists: "abc"
 
 let test() =
     let result = parse example
+    RestTest.ViewEngine.Hepler.RenderHtml(result)
     Console.ReadLine() |> ignore
