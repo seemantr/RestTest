@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="RestTest.ViewEngine.Assert" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAgAAAAABAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAA=</HashCode>
+      <FileName>Assert.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.Hepler" Collapsed="true">
+    <Position X="2.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAA=</HashCode>
+      <FileName>Hepler.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.ResourceExample">
+    <Position X="0.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAABgAAAAAAABAAQACAAAAAAAAAAAAAEABAA=</HashCode>
+      <FileName>ResourceExample.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.ResourceParam">
+    <Position X="0.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAMgAAAAAAAAAAQAAABAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ResourceParam.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.ResourceUri">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAAAAAgAAAAEAAgAAQAAAAAgAAAAAAAQAEAAAA=</HashCode>
+      <FileName>ResourceUri.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.RestDocument">
+    <Position X="4" Y="1.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAoAAAAEAAAAAAAAAEAAAAAAAACAAAAAAAEgA=</HashCode>
+      <FileName>RestDocument.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RestTest.ViewEngine.RestResource">
+    <Position X="4" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAIAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAEAAAg=</HashCode>
+      <FileName>RestResource.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="RestTest.ViewEngine.AssertType" Collapsed="true">
+    <Position X="2.25" Y="4.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Assert.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

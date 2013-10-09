@@ -1,10 +1,24 @@
 ﻿namespace RestTest.ViewEngine
 {
+    using System.Collections.Generic;
+
     using RestSharp;
 
     public class Assert
     {
-        public string Name { get; set; }
-        public RestResponse Response { get; set; }
+        public List<string> Values { get; set; }
+        public AssertType AssertType { get; set; }
+
+        public Assert()
+        {
+            this.Values = new List<string>();
+        }
+    }
+
+    public enum AssertType
+    {
+        DeepEquals,
+        Equals,
+        Exists
     }
 }

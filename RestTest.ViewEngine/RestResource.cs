@@ -5,7 +5,6 @@
     public class RestResource
     {
         #region Public Properties
-
         public string ResourceDescription { get; set; }
         public string ResourceName { get; set; }
         public string Note { get; set; }

@@ -14,41 +14,6 @@ let (|InvariantEqual|_|) (cmp: string) (str:string)  =
   if String.Compare(str, cmp, StringComparison.OrdinalIgnoreCase) = 0
     then Some() else None
 
-//// Parses input as key value pair using key:value format
-//let getKeyValue(input: string) =
-//    let input = input.Replace("\r\n", "").Replace("\t", "").Trim()
-//    (input.Substring(0, input.IndexOf(':')).Trim(), input.Substring(input.IndexOf(':') + 1).Trim())
-//
-//let getValues(input: string, paramCount: int) =
-//    let values = input.Split([|'\''|], System.StringSplitOptions.RemoveEmptyEntries)
-//    if values.Length < paramCount then
-//        failwithf "The input key is not valid: %s" input
-//    
-//    match values.Length with
-//    | 3 -> (values.[0], values.[2])
-//    | 2 -> (values.[0], values.[1])
-//    | 1 -> (values.[0], "")
-//    | _ -> failwithf "The input key is not valid: %s" input
-//
-//let getSubKey(input: string) =
-//    let count = input.Split('.').Count() - 1
-//    match count with
-//    | 1 -> (input.Substring(input.IndexOf('.') + 1).Trim(), "")
-//    | 2 -> (input.Substring(input.IndexOf('.') + 1, input.LastIndexOf('.') - input.IndexOf('.') - 1), input.Substring(input.LastIndexOf('.') + 1))
-//    | _ -> failwithf "The input key is not valid: %s" input
-//
-//let getSectionValue(input: string[]) =
-//    let (key, value) = getKeyValue(input.[0])
-//    let parameters = new Dictionary<string, string>()
-//    for line in input.Skip(1) do
-//        let (key, value) = getKeyValue(line)
-//        parameters.Add(key, value)
-//    (key, value, parameters)
-//
-
-
-
-
 type Token = KeyGroup of string list | KeyValue of string * obj
 
 let (<||>) p1 p2 = attempt (p1 |>> box) <|> attempt (p2 |>> box)
@@ -71,17 +36,7 @@ let kgKey    = (many1Chars (noneOf "\t\n].")) .>> spc
 let keygroup = blanks >>. brace (sepBy kgKey (lexeme ".")) |>> KeyGroup
 let document = blanks >>. many (keygroup <|> keyvalue .>> blanks)
 
-let generateParams(resource: ResourceUri, value: string) =
-    let lines = value.Split([|'\n'|], System.StringSplitOptions.RemoveEmptyEntries)
-    for line in lines do
-        let cols = line.Split([|','|], System.StringSplitOptions.None)
-        let param = new ResourceParam()
-        param.Name <- cols.[0]
-        param.DataType <- cols.[1]
-        param.DefaultValue <- cols.[2]
-        param.Required <- cols.[3]
-        param.Description <- cols.[4]
-        resource.ResourceParams.Add(param)
+let getListFromValues values = unbox<Collections.List<string>> values
 
 let parse text =
     let rest = new RestDocument()
@@ -94,17 +49,20 @@ let parse text =
                 currentKg := kg 
                 
                 match kg.Item(0) with
+                | StartsWith "RESOURCE_" -> ()
                 | StartsWith "RESOURCE" ->
                     let resource = new RestResource()
                     resource.ResourceName <- kg.Item(0).Substring(9)
                     rest.Resources.Add(resource)
-                    
+                
+                | StartsWith "URI_" -> ()
+                   
                 | StartsWith "URI" ->
                     let uri = new ResourceUri()
                     uri.Name <- kg.Item(0).Substring(4)
                     uri.Method <-
-                        match uri.Name.Substring(0, uri.Name.IndexOf(' ')) with
-                        | "POST" -> RestSharp.Method.POST
+                        match RestSharp.Method.TryParse(uri.Name.Substring(0, uri.Name.IndexOf(' '))) with
+                        | (true, x) -> x
                         | _ -> failwithf "Unsupported request method in : '%s'" uri.Name
                     
                     uri.Request <- uri.Name.Substring(uri.Name.IndexOf(' ')).Trim()
@@ -116,35 +74,85 @@ let parse text =
                     rest.Resources.Last().Uris.Last().Examples.Add(resourceExample)
 
                 | _ -> ()
+
             | KeyValue (key,value) -> 
                 let currentKg = !currentKg
                 if currentKg.Any() then
                     match currentKg.[0] with
+
+                    | StartsWith "RESOURCE_PARAMETERS" ->
+                        let values = getListFromValues value
+                        let param = new ResourceParam()
+                        param.Name <- key
+                        if key.StartsWith("+") then param.Required <- true
+                        param.DataType <- values.[0]
+                        param.DefaultValue <- values.[1]
+                        param.Description <- values.[2]
+                        rest.Resources.Last().Params.Add(param)
+
                     | StartsWith "RESOURCE" ->
                         match key with
                         | "description" -> rest.Resources.Last().ResourceDescription <- unbox<string> value
                         | "note" -> rest.Resources.Last().Note <- unbox<string> value
                         | _ -> ()
+                    
+                    | StartsWith "URI_PARAMETERS" ->
+                        let values = getListFromValues value
+                        let param = new ResourceParam()
+                        param.Name <- key
+                        if key.StartsWith("+") then param.Required <- true
+                        param.DataType <- values.[0]
+                        param.DefaultValue <- values.[1]
+                        param.Description <- values.[2]
+                        rest.Resources.Last().Uris.Last().ResourceParams.Add(param)
+                    
+                    | StartsWith "STATUS_CODES" ->
+                        rest.Resources.Last().Uris.Last().StatusCodes.Add(key, unbox<string> value)
+
                     | StartsWith "URI" ->
                         match key with
                         | "description" -> rest.Resources.Last().Uris.Last().Description <- unbox<string> value
                         | "note" -> rest.Resources.Last().Uris.Last().Note <- unbox<string> value
-                        | "params" -> generateParams(rest.Resources.Last().Uris.Last(), unbox<string> value)
                         | _ -> ()
+                    
                     | StartsWith "EXAMPLE" ->
                         match key with
                         | "description" -> rest.Resources.Last().Uris.Last().Examples.Last().Description <- unbox<string> value
                         | "note" -> rest.Resources.Last().Uris.Last().Examples.Last().Note <- unbox<string> value
                         | _ -> ()
+                    
+                    | StartsWith "HEADERS" ->
+                        rest.Resources.Last().Uris.Last().Examples.Last().Headers.Add(key, unbox<string> value)
 
+                    | StartsWith "PARAMETER" ->
+                        match key with
+                        | "body" -> 
+                            rest.Resources.Last().Uris.Last().Examples.Last().Body <- unbox<string> value
+                        | _ -> rest.Resources.Last().Uris.Last().Examples.Last().QueryParams.Add(key, unbox<string> value) 
+
+                    | StartsWith "ASSERTS" ->
+                        let test = new Assert()
+                        test.AssertType <- 
+                            match AssertType.TryParse(key, true) with
+                            | (true, x)-> x
+                            | _ -> failwithf "Undefied assert condition: %s" key
+                        test.Values.AddRange(getListFromValues value)
+                        rest.Resources.Last().Uris.Last().Examples.Last().Asserts.Add(test)
                     | _ -> ()
+                else
+                    // Pair belongs to the top level resource 
+                    match key with
+                    | "url" -> rest.Url <- unbox<string> value
+                    | "name" -> rest.DocumentName <- unbox<string> value
+                    | "description" -> rest.DocumentDescription <- unbox<string> value
+                    | "version" -> rest.Version <- unbox<string> value
+                    | "api_version" -> rest.ApiVersion <- unbox<string> value
+                    | "response_format" -> 
+                        rest.ResponseFormat.AddRange(getListFromValues value)
 
-                // Pair belongs to the top level resource 
-                match key with
-                | "description" -> rest.DocumentDescription <- unbox<string> value
-                | "name" -> rest.DocumentName <- unbox<string> value
-                | "version" -> rest.Version <- unbox<string> value
-                | _ -> ()
+                    | "request_format" -> 
+                        rest.RequestFormat.AddRange(getListFromValues value)
+                    | _ -> ()
 
     | Failure(a, b, c) -> 
         Console.WriteLine(a)
@@ -156,57 +164,58 @@ let parse text =
 let example = """
 url : "http://localhost:9800"
 name : "FlexSearch API documentation"
-description : "Creates a new index"
+description : "
+FlexSearch is a high performance REST/SOAP services based full-text searching platform built on top of the popular Lucene search library. At its core it is about extensibility and maintainability with minimum overhead. FlexSearch is written in F# & C# 5.0 (.net framework 4.5). It exposes REST, SOAP and Binary based web service endpoints enabling easy integration. It has an extensive plug-in architecture with ability to customize most of the functionality with minimum amount of efforts. One area where Lunar particularly excel over competition is providing easy extensible connector model which allows a developer to tap directly into core’s indexing engine, thus avoiding the reliance on web services. This results in a greatly improved indexing performance when indexing over millions of records.
+"
 version: "0.2.1"
+api_version: "1.0"
+response_format : ["XML", "JSON"]
+request_format : ["XML, JSON"]
 
--------------------------------------------------------------------------
-[RESOURCE document]
--------------------------------------------------------------------------
+[RESOURCE Document]
 description : "Creates a new index"
+-note : "Use with care"
+
+[RESOURCE_PARAMETERS] 
+OpenIndex : ["int", "default", "open the newly created index"]
+CloseIndex : ["int", "default", "open the newly created index"]
 
 [URI POST resource/{id}/{user}]
--------------------------------------------------------------------------
+
 description : "Creates a new index"
 note : "Use with care"
-params : "
-OpenIndex, int, required, false, open the newly created index 
-"
 
-statuscodes : "
-200, OK
-400, Invalid word supplied
-"
+[URI_PARAMETERS] 
+OpenIndex : ["int", "default", "open the newly created index"]
+CloseIndex : ["int", "default", "open the newly created index"]
 
-information : "
-Response Formats: XML JSON JSV CSV X-MSGPACK X-PROTOBUF SOAP 1.1 SOAP 1.2
-HTTP Methods: POST
-Minimum API version: v1.0
-Resource URL: http://localhost:9800/index/create
-"
+[STATUS_CODES]
+200 : "OK"
+400 : "Invalid word supplied"
 
 [EXAMPLE Create a simple index]
--------------------------------------------------------------------------
+
 description : "Creates a new index"
 note : "Use with care"
-queryparams : "
-id: 23 
-user: abc
-"
 
-headers : "
-content-type: text/json
-Accept-Encoding: gzip, deflate
-Accept-Language: en-GB 
-"
+[HEADERS]
+content-type: "text/json"
+Accept-Encoding: "gzip, deflate"
+Accept-Language: "en-GB"
+
+[PARAMETER]
+id: "23"
+user: "abc"
 
 body : "
 {
-	'firstname':'test'
+'firstname':'test'
 }"
 
-deepEquals: "abc, { 'firstname':'test'	}"
-equals: "abc, dsdsd"
-exists: "abc"
+[ASSERTS]
+deepEquals: ["abc", "{ 'firstname':'test' }"]
+equals: ["abc" , "dsdsd"]
+exists: ["abc"]
 """
 
 

@@ -1,85 +1,263 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="">
-        <meta name="author" content="">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-        <title>Starter Template for Bootstrap</title>
+    <title>Starter Template for Bootstrap</title>
 
-        <!-- Bootstrap core CSS -->
-        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
-        <link href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css" rel="stylesheet">
-    </head>
+    <!-- Bootstrap core CSS -->
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css" rel="stylesheet">
+</head>
 
-    <body>
-        <div class="container bs-docs-container">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="bs-sidebar hidden-print" role="complementary">
-                        <ul class="nav bs-sidenav">
-                            <li class="sidebar-brand"><a href="#">Resources</a></li>
-                            @foreach (var resource in @Model.Resources){
-                            <li>
-                                <a href="#@resource.ResourceName">@resource.ResourceName</a>
-                            </li>
-                            }
-                        </ul>
-                    </div>
+<body>
+    <div class="container bs-docs-container">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="bs-sidebar hidden-print" role="complementary">
+                    <ul class="nav bs-sidenav">
+                        <li class="sidebar-brand"><a href="#">Resources</a></li>
+                        @foreach (var resource in @Model.Resources){
+                        <li>
+                            <a href="#@resource.ResourceName">@resource.ResourceName</a>
+                        </li>
+                        }
+                    </ul>
                 </div>
-                <div class="col-md-9" role="main">
+            </div>
+            <div class="col-md-9" role="main">
+                <div class="page-header">
+                    <h1>@Model.DocumentName</h1>
+                </div>
+                <div class="bs-docs-section">
+                    <p>@Model.DocumentDescription</p>
+                    <h4>API Information</h4>
+                    <table class="table table-striped">
+                        <colgroup>
+                            <col class="col-lg-2" />
+                            <col class="col-lg-6">
+                        </colgroup>
+                        <tr>
+                            <td>Supported platform Version</td>
+                            <td>@Model.Version</td>
+                        </tr>
+                        <tr>
+                            <td>API Version</td>
+                            <td>@Model.ApiVersion</td>
+                        </tr>
+                        <tr>
+                            <td>Request Format</td>
+                            <td>@foreach (var format in Model.RequestFormat)
+                                {
+                                <code>@format</code>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Response Format</td>
+                            <td>@foreach (var format in Model.ResponseFormat)
+                                {
+                                <code>@format</code>
+                                }
+                            </td>
+                        </tr>
+                    </table>
+
+
+
+                    @foreach (var resource in Model.Resources)
+                    { 
+                    <!-- Resource Start -->
                     <div class="page-header">
-                        <h1>@Model.DocumentName
-                        </h1>
+                        <h1 id="@resource.ResourceName">@resource.ResourceName</h1>
                     </div>
-                    <div class="bs-docs-section">
-                        @for (var resourceIndex = 0; resourceIndex < Model.Resources.Count(); resourceIndex++)
+
+                    <!-- Resource Description -->
+                    <p>@resource.ResourceDescription</p>
+
+                    <!-- Resource Parameters -->
+                    <h4>Parameters</h4>
+                    <table class="table table-striped">
+                        <colgroup>
+                            <col class="col-lg-1" />
+                            <col class="col-lg-1" />
+                            <col class="col-lg-1">
+                            <col class="col-lg-4">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Default Value</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        @foreach (var param in resource.Params)
                         { 
-                            <div class="page-header">
-                                <h1 id="@Model.Resources[resourceIndex].ResourceName">@Model.Resources[resourceIndex].ResourceName</h1>
+                        <tr>
+                            <td>
+                                <code>@param.Name</code>
+                            </td>
+                            <td>@param.DataType
+                            </td>
+                            <td>@if (param.Required == true){
+                                <code>REQUIRED</code>
+                                }else{
+                                @param.DefaultValue
+                                }
+                            </td>
+                            <td>@param.Description
+                            </td>
+                        </tr>
+                        }
+                    </table>
+
+
+                    <!-- Resource Note -->
+                    if (string.IsNullOrEmpty(resource.Note) == false){
+                    <div class="alert alert-info">
+                        <h4>Note</h4>
+                        <p>@resource.Note</p>
+                    </div>
+                    }
+                    
+
+                    <!--------------------------------------------------------
+                        URI Start 
+                    ---------------------------------------------------------->
+                    foreach (var uri in resource.Uris) 
+                    {                     
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4><code>@uri.Name</code></h4>
+                        </div>
+                        <div class="panel-body">
+                            <p>@uri.Description</p>
+
+                            <!-- URI Parameters -->
+                            @if (string.IsNullOrEmpty(uri.Note) == false){
+                            <h4>Parameters</h4>
+                            <table class="table table-striped">
+                                <colgroup>
+                                    <col class="col-lg-1" />
+                                    <col class="col-lg-1" />
+                                    <col class="col-lg-1">
+                                    <col class="col-lg-4">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Default Value</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                @foreach (var param in uri.ResourceParams)
+                                { 
+                                <tr>
+                                    <td>
+                                        <code>@param.Name</code>
+                                    </td>
+                                    <td>@param.DataType
+                                    </td>
+                                    <td>@if (param.Required == true){
+                                        <code>REQUIRED</code>
+                                        }else{
+                                        @param.DefaultValue
+                                        }
+                                    </td>
+                                    <td>@param.Description
+                                    </td>
+                                </tr>
+                                }
+                            </table>
+                            }
+                            <!-- URI Parameters End -->
+                            @if (uri.StatusCodes.Any()) {
+                            <h4>Status Code</h4>
+                            foreach (var code in uri.StatusCodes){    
+                            <code>@code.Key</code>  @code.Value
+                            <br />
+                            }}
+                            <!-- URI Status code -->
+
+                            <!-- URI Status code ends -->
+
+                            <!-- URI Note -->
+                            @if (string.IsNullOrEmpty(uri.Note) == false){
+                            <br />
+                            <div class="alert alert-info">
+                                <h4>Note</h4>
+                                <p>@uri.Note</p>
                             </div>
-                            <h3>Description</h3>
-                            <p>@Model.Resources[resourceIndex].ResourceDescription</p>
+                            }
+                            <!-- URI Note ends -->
 
-                            for(var uriIndex = 0; resourceIndex < Model.Resources[resourceIndex].Uris.Count(); uriIndex++) 
-                            {                     
+                            <!--------------------------------------------------------
+                                Examples Start 
+                            ---------------------------------------------------------->
+                            @foreach( var example in uri.Examples){
                                 <div class="panel panel-default">
-                                    <div class="panel-heading">@Model.Resources[resourceIndex].Uris[uriIndex].Name</div>
+                                    <div class="panel-heading">
+                                        <h4><code>@example.Name</code></h4>
+                                    </div>
                                     <div class="panel-body">
-                                        <h2>@Model.Resources[resourceIndex].Uris[uriIndex].Name</h2>
-                                        <p>@Model.Resources[resourceIndex].Uris[uriIndex].Description</p>
+                                        <p>@example.Description</p>
+                                        <!-- Example Note -->
+                                        @if (string.IsNullOrEmpty(example.Note) == false){
+                                        <br />
+                                        <div class="alert alert-info">
+                                            <h4>Note</h4>
+                                            <p>
+                                                @example.Note
+                                            </p>
+                                        </div>
+                                        }
+                                        <!-- Example Note ends -->
+                                        <p>@uri.Request</p>
+                                        @foreach(var param in example.QueryParams){
+                                        <code>@param.Key</code>  @param.Value
+                                        <br />
+                                        }
+                                        <hr />
 
-                                        <h3>Parameters</h3>
-                                        @for (var paramIndex = 0; paramIndex < Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams.Count(); paramIndex++)
-                                        { 
-                                            <dl>
-                                                <dt>@Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].Name</dt>
-                                                <dd>
-                                                    @Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].DataType
-                                                    @Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].DefaultValue
-                                                </dd>
-                                                <dd>@Model.Resources[resourceIndex].Uris[uriIndex].ResourceParams[paramIndex].Description</dd>
-                                            </dl>
+                                        @foreach(var header in example.Headers){
+                                        <code>@header.Key</code>  @header.Value
+                                        <br />
+                                        }
+                                        
+                                        <code>@example.Body
+                                        </code>
+                                    </div>
+                                    <div class="panel-footer">
+                                        @if (example.Response != null){
+                                        
                                         }
                                     </div>
                                 </div>
                             }
-                        }   
+                        </div>
                     </div>
+                    }
+                    }   
                 </div>
             </div>
         </div>
-        <!-- Bootstrap core JavaScript -->
-        <!-- Placed at the end of the document so the pages load faster -->
-        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"> </script>
-        <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"> </script>
-        <!-- Put this into a custom JavaScript file to make things more organized -->
-        <script>
-            $("#menu-toggle").click(function(e) {
-                e.preventDefault();
-                $("#wrapper").toggleClass("active");
-            });
-        </script>
-    </body>
+    </div>
+
+    <!-- Bootstrap core JavaScript -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"> </script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"> </script>
+    <!-- Put this into a custom JavaScript file to make things more organized -->
+    <script>
+        $("#menu-toggle").click(function (e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("active");
+        });
+    </script>
+</body>
 </html>
