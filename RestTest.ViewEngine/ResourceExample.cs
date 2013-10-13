@@ -14,13 +14,14 @@
         public Dictionary<string, string> QueryParams { get; set; }
         public string Body { get; set; }
         public List<Assert> Asserts { get; set; }
-        public RestResponse Response { get; set; }
+        public IRestResponse Response { get; set; }
 
         public ResourceExample()
         {
             this.Asserts =  new List<Assert>();
             this.Headers = new Dictionary<string, string>();
             this.QueryParams = new Dictionary<string, string>();
+            this.Response = new RestResponse();
         }
     }
 }

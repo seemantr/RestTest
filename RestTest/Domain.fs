@@ -45,7 +45,7 @@ type TestCase() =
     member val Headers     = new Dictionary<string, string>() with get, set
     member val Body        = "" with get, set
     member val Asserts     = new   List<TestAssert>() with get, set 
-    
+  
 
 type TestComponent =
     | Url of string

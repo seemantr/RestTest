@@ -6,67 +6,206 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Starter Template for Bootstrap</title>
+    <title>@Model.DocumentName</title>
 
     <!-- Bootstrap core CSS -->
     <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
     <link href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css" rel="stylesheet">
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.css" rel="stylesheet">
+    <style type="text/css">
+        /*
+ * Callouts
+ *
+ * Not quite alerts, but custom and helpful notes for folks reading the docs.
+ * Requires a base and modifier class.
+ */
+
+        /* Common styles for all types */
+        .bs-callout
+        {
+            margin: 20px 0;
+            padding: 15px 30px 15px 15px;
+            border-left: 5px solid #eee;
+        }
+
+            .bs-callout h4
+            {
+                margin-top: 0;
+            }
+
+            .bs-callout p:last-child
+            {
+                margin-bottom: 0;
+            }
+
+            .bs-callout code,
+            .bs-callout .highlight
+            {
+                background-color: #fff;
+            }
+
+        /* Variations */
+        .bs-callout-danger
+        {
+            background-color: #fcf2f2;
+            border-color: #dFb5b4;
+        }
+
+        .bs-callout-warning
+        {
+            background-color: #fefbed;
+            border-color: #f1e7bc;
+        }
+
+        .bs-callout-info
+        {
+            background-color: #f0f7fd;
+            border-color: #d0e3f0;
+        }
+
+        /*
+ * Examples
+ *
+ * Isolated sections of example content for each component or feature. Usually
+ * followed by a code snippet.
+ */
+
+        .bs-example
+        {
+            position: relative;
+            padding: 45px 15px 15px;
+            margin: 0 -15px 15px;
+            background-color: #fafafa;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,.05);
+            border-color: #e5e5e5 #eee #eee;
+            border-style: solid;
+            border-width: 1px 0;
+        }
+            /* Echo out a label for the example */
+            .bs-example:after
+            {
+                content: "Example";
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                font-size: 12px;
+                font-weight: bold;
+                color: #bbb;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            /* Tweak display of the code snippets when following an example */
+            .bs-example + .highlight
+            {
+                margin: -15px -15px 15px;
+                border-radius: 0;
+                border-width: 0 0 1px;
+            }
+        /*
+ * Code snippets
+ *
+ * Generated via Pygments and Jekyll, these are snippets of HTML, CSS, and JS.
+ */
+
+        .highlight
+        {
+            display: none; /* hidden by default, until >480px */
+            padding: 9px 14px;
+            margin-bottom: 14px;
+            background-color: #f7f7f9;
+            border: 1px solid #e1e1e8;
+            border-radius: 4px;
+        }
+
+            .highlight pre
+            {
+                padding: 0;
+                margin-top: 0;
+                margin-bottom: 0;
+                background-color: transparent;
+                border: 0;
+                white-space: nowrap;
+            }
+
+                .highlight pre code
+                {
+                    font-size: inherit;
+                    color: #333; /* Effectively the base text color */
+                }
+
+                .highlight pre .lineno
+                {
+                    display: inline-block;
+                    width: 22px;
+                    padding-right: 5px;
+                    margin-right: 10px;
+                    text-align: right;
+                    color: #bebec5;
+                }
+    </style>
 </head>
 
-<body>
-    <div class="container bs-docs-container">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="bs-sidebar hidden-print" role="complementary">
-                    <ul class="nav bs-sidenav">
-                        <li class="sidebar-brand"><a href="#">Resources</a></li>
-                        @foreach (var resource in @Model.Resources){
-                        <li>
-                            <a href="#@resource.ResourceName">@resource.ResourceName</a>
-                        </li>
-                        }
-                    </ul>
-                </div>
+
+<body onload="prettyPrint()">
+    <header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav" role="banner">
+        <div class="container">
+            <div class="navbar-header">
+                <a href="#" class="navbar-brand">@Model.DocumentName - @Model.Version</a>
             </div>
-            <div class="col-md-9" role="main">
+            <div class="collapse navbar-collapse navbar-ex1-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="https://github.com/seemantr/RestTest">[Built using RestTest]</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+    <div style="padding-top: 75px; width: 10px"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-10" role="main">
                 <div class="page-header">
                     <h1>@Model.DocumentName</h1>
                 </div>
                 <div class="bs-docs-section">
-                    <p>@Model.DocumentDescription</p>
-                    <h4>API Information</h4>
-                    <table class="table table-striped">
-                        <colgroup>
-                            <col class="col-lg-2" />
-                            <col class="col-lg-6">
-                        </colgroup>
-                        <tr>
-                            <td>Supported platform Version</td>
-                            <td>@Model.Version</td>
-                        </tr>
-                        <tr>
-                            <td>API Version</td>
-                            <td>@Model.ApiVersion</td>
-                        </tr>
-                        <tr>
-                            <td>Request Format</td>
-                            <td>@foreach (var format in Model.RequestFormat)
-                                {
-                                <code>@format</code>
-                                }
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Response Format</td>
-                            <td>@foreach (var format in Model.ResponseFormat)
-                                {
-                                <code>@format</code>
-                                }
-                            </td>
-                        </tr>
-                    </table>
+                    <p>@Raw(Model.DocumentDescription)</p>
+                    <br />
 
+                    <div class="panel panel-default">
+                        <!-- Default panel contents -->
+                        <div class="panel-heading">API Information</div>
+                        <table class="table">
+                            <colgroup>
+                                <col class="col-lg-2" />
+                                <col class="col-lg-6">
+                            </colgroup>
+                            <tr>
+                                <td>Platform Version</td>
+                                <td><code>@Model.Version</code></td>
+                            </tr>
+                            <tr>
+                                <td>API Version</td>
+                                <td><code>@Model.ApiVersion</code></td>
+                            </tr>
+                            <tr>
+                                <td>Request Format</td>
+                                <td>@foreach (var format in Model.RequestFormat)
+                                    {
+                                    <code>@format</code>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Response Format</td>
+                                <td>@foreach (var format in Model.ResponseFormat)
+                                    {
+                                    <code>@format</code>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
 
+                    </div>
 
                     @foreach (var resource in Model.Resources)
                     { 
@@ -76,11 +215,11 @@
                     </div>
 
                     <!-- Resource Description -->
-                    <p>@resource.ResourceDescription</p>
+                    <p>@Raw(resource.ResourceDescription)</p>
 
                     <!-- Resource Parameters -->
                     <h4>Parameters</h4>
-                    <table class="table table-striped">
+                    <table class="table table-bordered">
                         <colgroup>
                             <col class="col-lg-1" />
                             <col class="col-lg-1" />
@@ -91,7 +230,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Type</th>
-                                <th>Default Value</th>
+                                <th>Default</th>
                                 <th>Description</th>
                             </tr>
                         </thead>
@@ -118,29 +257,30 @@
 
                     <!-- Resource Note -->
                     if (string.IsNullOrEmpty(resource.Note) == false){
-                    <div class="alert alert-info">
+                    <div class="bs-callout bs-callout-danger">
                         <h4>Note</h4>
-                        <p>@resource.Note</p>
+                        <p>@Raw(resource.Note)</p>
                     </div>
                     }
                     
 
                     <!--------------------------------------------------------
                         URI Start 
-                    ---------------------------------------------------------->
+                        ---------------------------------------------------------->
+                    <!--<div class="panel-group" id="accordion">-->
                     foreach (var uri in resource.Uris) 
                     {                     
-                    <div class="panel panel-default">
+                    <div class="panel panel-primary">
                         <div class="panel-heading">
-                            <h4><code>@uri.Name</code></h4>
+                            <h4 id="@uri.Name">@uri.Name</h4>
                         </div>
                         <div class="panel-body">
-                            <p>@uri.Description</p>
+                            <p>@Raw(uri.Description)</p>
 
                             <!-- URI Parameters -->
-                            @if (string.IsNullOrEmpty(uri.Note) == false){
+                            @if (uri.ResourceParams.Any()){
                             <h4>Parameters</h4>
-                            <table class="table table-striped">
+                            <table class="table table-bordered">
                                 <colgroup>
                                     <col class="col-lg-1" />
                                     <col class="col-lg-1" />
@@ -151,7 +291,7 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Type</th>
-                                        <th>Default Value</th>
+                                        <th>Default</th>
                                         <th>Description</th>
                                     </tr>
                                 </thead>
@@ -176,12 +316,14 @@
                             </table>
                             }
                             <!-- URI Parameters End -->
+
                             @if (uri.StatusCodes.Any()) {
                             <h4>Status Code</h4>
                             foreach (var code in uri.StatusCodes){    
                             <code>@code.Key</code>  @code.Value
                             <br />
                             }}
+                            <br />
                             <!-- URI Status code -->
 
                             <!-- URI Status code ends -->
@@ -189,69 +331,100 @@
                             <!-- URI Note -->
                             @if (string.IsNullOrEmpty(uri.Note) == false){
                             <br />
-                            <div class="alert alert-info">
+                            <div class="bs-callout bs-callout-danger">
                                 <h4>Note</h4>
-                                <p>@uri.Note</p>
+                                <p>@Raw(uri.Note)</p>
                             </div>
                             }
                             <!-- URI Note ends -->
 
                             <!--------------------------------------------------------
                                 Examples Start 
-                            ---------------------------------------------------------->
+                                ---------------------------------------------------------->
                             @foreach( var example in uri.Examples){
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <h4><code>@example.Name</code></h4>
-                                    </div>
-                                    <div class="panel-body">
-                                        <p>@example.Description</p>
-                                        <!-- Example Note -->
-                                        @if (string.IsNullOrEmpty(example.Note) == false){
-                                        <br />
-                                        <div class="alert alert-info">
-                                            <h4>Note</h4>
-                                            <p>
-                                                @example.Note
-                                            </p>
-                                        </div>
-                                        }
-                                        <!-- Example Note ends -->
-                                        <p>@uri.Request</p>
-                                        @foreach(var param in example.QueryParams){
-                                        <code>@param.Key</code>  @param.Value
-                                        <br />
-                                        }
-                                        <hr />
+                            <div class="bs-example">
+                                <h4>@example.Name</h4>
 
-                                        @foreach(var header in example.Headers){
-                                        <code>@header.Key</code>  @header.Value
-                                        <br />
-                                        }
-                                        
-                                        <code>@example.Body
-                                        </code>
-                                    </div>
-                                    <div class="panel-footer">
-                                        @if (example.Response != null){
-                                        
-                                        }
-                                    </div>
+                                <p>@Raw(example.Description)</p>
+                                <!-- Example Note -->
+                                @if (string.IsNullOrEmpty(example.Note) == false){
+                                <div class="bs-callout bs-callout-info">
+                                    <h4>Note</h4>
+                                    <p>
+                                        @Raw(example.Note)
+                                    </p>
                                 </div>
+                                }
+                                    
+                                <!-- Example Note ends -->
+                                <div class="well">
+                                    <h4>Request</h4>
+                                    @foreach(var param in example.QueryParams){
+                                    <p><code>@param.Key</code>  @param.Value</p>
+                                    }
+
+                                    @foreach(var header in example.Headers){
+                                    <p style="padding: 0; margin: 0"><code>@header.Key &#58; @header.Value</code></p>
+
+                                    }
+
+                                    <br />
+
+                                    <pre class="prettyprint languague-javascript">@example.Body
+                                        </pre>
+                                    <hr />
+
+                                    <h4>Response</h4>
+                                    <p style="padding: 0; margin: 0"><code>Response-Status &#58; @example.Response.StatusCode</code></p>
+                                    @foreach(var header in example.Response.Headers){
+                                    <p style="padding: 0; margin: 0"><code>@header.Name &#58; @header.Value</code></p>
+
+                                    }
+
+                                    <br />
+                                    <pre class="prettyprint languague-javascript">@example.Response.Content
+                                        </pre>
+                                </div>
+                            </div>
                             }
                         </div>
                     </div>
                     }
-                    }   
+                    <!--                   </div>-->
+                    }          
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div style="top: 100px; position: fixed;"
+                    data-spy="affix" data-offset-top="180">
+                    <div class="panel panel-default">
+                        <!-- Default panel contents -->
+                        <div class="panel-heading">Available Resources</div>
+                        <ul class="list-group">
+                            @foreach (var resource in Model.Resources){
+                                <li class="list-group-item" style="background-color: #d0e3f0; padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0">
+                                    <a href="#@resource.ResourceName">@resource.ResourceName</a></li>
+                            foreach(var uri in resource.Uris){
+                                        
+                                        <li class="list-group-item" style="padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0"><a href="#@uri.Name">@uri.Name</a></li>
+                            }}
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div id="footer">
+        <div class="container">
+            <p class="text-muted credit">Built using <a href="https://github.com/seemantr/RestTest">RestTest</a>.</p>
+        </div>
+    </div>
     <!-- Bootstrap core JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"> </script>
     <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"> </script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.js" type="text/javascript"></script>
     <!-- Put this into a custom JavaScript file to make things more organized -->
     <script>
         $("#menu-toggle").click(function (e) {

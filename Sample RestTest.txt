@@ -1,0 +1,568 @@
+------------------------------------------------------------------
+name : {F}lexSearch API
+------------------------------------------------------------------
+url : http://seemant-pc:9800
+version : 0.2.1 
+api_version : 0.2
+response_format : XML, JSON, JSV, CSV, X-MSGPACK, X-PROTOBUF, SOAP 1.1, SOAP 1.2
+request_format : XML, JSON, JSV, X-MSGPACK, X-PROTOBUF, SOAP 1.1, SOAP 1.2
+------------------------------------------------------------------
+
+Description :
+FlexSearch is a high performance REST/SOAP services based full-text searching platform built on top of the popular Lucene search library. At its core it is about extensibility and maintainability with minimum overhead. FlexSearch is written in F# & C# 5.0 (.net framework 4.5). It exposes REST, SOAP and Binary based web service endpoints enabling easy integration. It has an extensive plug-in architecture with ability to customize most of the functionality with minimum amount of efforts. One area where Lunar particularly excel over competition is providing easy extensible connector model which allows a developer to tap directly into core's indexing engine, thus avoiding the reliance on web services. This results in a greatly improved indexing performance when indexing over millions of records.
+..
+
+------------------------------------------------------------------
+Resource: Index
+------------------------------------------------------------------
+Resource-Description : 
+FlexSearch index is a logical index built on top of Lucene's index in a mannner to support features like schema and sharding. So in this sense a FlexSearch index consists of multiple Lucene's index. Also, each FlexSearch shard is a valid Lucene index.
+..
+
+Resource-Parameter : 
++IndexName : string, , Name of the index
+
+Uri: POST index/create
+------------------------------------------------------------------
+Uri-Description :
+Creates a new index
+..
+
+Uri-Parameter :
+OpenIndex : bool, false, open the newly created index
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to create an index without any fields
+------------------------------------------------------------------
+Example-Description :
+The newly created index will be offline as the OpenIndex parameter is set to false.
+..
+
+Example-Note : 
+An index has to be opened after creation to enable indexing.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+   "OpenIndex":false,
+   "Index":{
+      "IndexName":"test1"
+   }
+}
+..
+
+Example: Request to create an index with two fields
+------------------------------------------------------------------
+Example-Description :
+There are various parameters which can be set while creating an index. Let's start with adding two simple fields to the index called "firstname" & "lastname". All field names should be lower case and should not contain any spaces. This is to avoid case based mismatching on field names.
+..
+
+Example-Note : 
+Fields have many other configurable properties but Field Type is the only mandatory parameter. Refer to `Index Field <./indexfield.html>`_ for more information about field properties.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body :
+{
+   "OpenIndex":false,
+   "Index":{
+      "Fields":{
+         "firstname":{
+            "FieldType":"Text"
+         },
+         "lastname":{
+            "FieldType":"Text"
+         }
+      },
+      "IndexName":"test2"
+   }
+}
+..
+
+Example: Request to create an index and open it for immediate use
+------------------------------------------------------------------
+Example-Description :
+The newly created index will be offline as the OpenIndex parameter is set to false.
+..
+
+Example-Note : 
+An index has to be opened after creation to enable indexing.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+   "OpenIndex":true,
+   "Index":{
+      "Fields":{
+         "firstname":{
+            "FieldType":"Text"
+         },
+         "lastname":{
+            "FieldType":"Text"
+         }
+      },
+      "IndexName":"test"
+   }
+}
+..
+
+Example: Computed Fields
+------------------------------------------------------------------
+Example-Description : 
+Fields can be dynamic in nature and can be computed at index time from the passed data. Computed field requires custom scripts which defines the field data creation logic. Let's create an index field called fullname which is a concatenation of 'firstname' and 'lastname'.
+..
+
+Example-Note :
+Computed fields requires ScriptName property to be set in order load a custom script. FlexSearch scripts are dynamically compiled to .net dlls so performance wise they are similar to native .net code. Scripts are written in C#. But it would be difficult to write complex scripts in single line to pass to the Script source, that is why Flex supports Multi-line and File based scripts. Refer to `Script <./script.html>`_ for more information about scripts.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body :
+{
+   "OpenIndex":false,
+   "Index":{
+      "Fields":{
+         "firstname":{
+            "FieldType":"Text"
+         },
+         "lastname":{
+            "FieldType":"Text"
+         },
+         "fullname":{
+            "FieldType":"Text",
+            "ScriptName":"fullname"
+         }
+      },
+      "IndexName":"test3",
+      "Scripts":{
+         "fullname":{
+            "ScriptOption":"SingleLine",
+            "ScriptSource":"fields[\"firstname\"] + \" \" + fields[\"lastname\"]",
+            "ScriptType":"ComputedField"
+         }
+      }
+   }
+}
+..
+
+Example: Custom Analyzer Fields
+------------------------------------------------------------------
+Example-Description : 
+Analyzers can be created or modified from an index using the index APIs - <code>indexcreate</code> and <code>indexupdate</code>. Setting up an analyzer chain is very straightforward; you specify a simple analyzer element with child elements that name the tokenizer and filters to use, in the order you want them to run
+..
+
+Example-Note :
+This example starts with FlexSearch's standard tokenizer, which breaks the field's text into tokens. Those tokens then pass through FlexSearch's standard filter, which removes dots from acronyms, and performs a few other common operations. All the tokens are then set to lowercase, which will facilitate case-insensitive matching at query time. You can specify more filters if needed. In case filters have associated properties then that can also be specified along with filter definition. You can also specify the same filter more than once. The order in which filters are defined here will be the order in which the filters will be called during the analysis chain.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body :
+{
+    "Index": {
+        "Analyzers": {
+            "firstnameanalyzer": {
+                "Filters": [
+                    {
+                        "FilterName": "standardfilter"
+                    },
+                    {
+                        "FilterName": "lowercasefilter"
+                    }
+                ],
+                "Tokenizer": {
+                    "TokenizerName": "standardtokenizer"
+                }
+            }
+        },
+        "Fields": {
+            "firstname": {
+                "FieldType": "Text",
+                "Index": true,
+                "IndexAnalyzer": "firstnameanalyzer",
+            }
+        },
+        "IndexName": "testwithcustomanalyzer",
+    }
+}
+..
+
+Example: Creating an existing index
+------------------------------------------------------------------
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+	"Index":{
+      "IndexName":"test1"
+	  }
+}
+..
+
+Uri: POST index/show
+------------------------------------------------------------------
+Uri-Description :
+Get an existing index.
+..
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to get an existing index
+------------------------------------------------------------------
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+      "IndexName":"test1"
+}
+..
+
+Example: Index not found
+------------------------------------------------------------------
+Example-Note :
+Response body always get populated with an error message. Errors can be easily determined by accessing <code>ResponseStatus.Message</code> property. Also, the <code>ResponseStatus</code> is set to <code>NotFound</code>.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+      "IndexName":"doesnotexist"
+}
+..
+
+Uri: POST index/update
+------------------------------------------------------------------
+Uri-Description :
+Update an existing index.
+..
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to update an existing index
+------------------------------------------------------------------
+Example-Note:
+The updated index will be in the same state as it was initially before the update.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+   "Index":{
+      "Fields":{
+         "firstname":{
+            "FieldType":"Text"
+         },
+         "lastname":{
+            "FieldType":"Text"
+         }
+      },
+      "IndexName":"test1"
+   }
+}
+..
+
+Uri: POST index/destroy
+------------------------------------------------------------------
+Uri-Description :
+Destroys an existing index.
+..
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to delete an existing index.
+------------------------------------------------------------------
+Example-Note:
+The will delete the data from the physical disk as well.
+..
+
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+      "IndexName":"test1"
+}
+..
+
+Uri: POST index/exists
+------------------------------------------------------------------
+Uri-Description :
+Checks if a given index exists or not.
+..
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to check if a given index exists or not
+------------------------------------------------------------------
+Example-Headers :
+Content-Type: application/json
+Accept: application/json
+
+Example-Body : 
+{
+      "IndexName":"test"
+}
+..
+
+Uri: POST index/openindex
+------------------------------------------------------------------
+Uri-Description:
+An index has to be opened before any operation can be performed on it. openindex request is used to open a closed index.
+..
+
+Uri-Statuscodes :
+200 : OK
+400 : Bad Request
+500 : Internal Server Error
+
+Example: Request to open a closed index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body: 
+{
+      "IndexName":"test2"
+}
+..
+
+Uri: POST index/closeindex
+------------------------------------------------------------------
+Uri-Description :
+An index has to be opened before any operation can be performed on it. openindex request is used to open a closed index.
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Request to close an open index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body: 
+{
+      "IndexName":"test2"
+}
+..
+
+------------------------------------------------------------------
+Resource: Document
+------------------------------------------------------------------
+Resource-Description: 
+<p>
+In FlexSearch a document represents the basic unit of information which can be added or retrieved from the index. A document consists of several fields. A field represents the actual data to be indexed. In database analogy an index can be considered as a table while a document is a row of that table. Like a table a FlexSearch document requires a fix schema and all fields should have a field type.
+</p>
+<p>
+Fields can contain different kinds of data. A name field, for example, is text (character data). A shoe size field might be a floating point number so that it could contain values like 6 and 9.5. Obviously, the definition of fields is flexible (you could define a shoe size field as a text field rather than a floating point number, for example), but if you define your fields correctly, FlexSearch will be able to interpret them correctly and your users will get better results when they perform a query.
+</p>
+<p>
+You can tell FlexSearch about the kind of data a field contains by specifying its field type. The field type tells FlexSearch how to interpret the field and how it can be queried. When you add a document, FlexSearch takes the information in the document's fields and adds that information to an index. When you perform a query, FlexSearch can quickly consult the index and return the matching documents.
+</p>
+<p>
+Field Analysis Field analysis tells FlexSearch what to do with incoming data when building an index. A more accurate name for this process would be processing or even digestion, but the official name is analysis. Consider, for example, a biography field in a person document. Every word of the biography must be indexed so that you can quickly find people whose lives have had anything to do with ketchup or dragonflies or cryptography.
+</p>
+<p>
+However, a biography will likely contains lots of words you don't care about and don't want clogging up your index, words like 'the', 'a', 'to', and so forth. Furthermore, suppose the biography contains the word 'Ketchup', capitalized at the beginning of a sentence. If a user makes a query for 'ketchup', you want FlexSearch to tell you about the person even though the biography contains the capitalized word.
+</p>
+<p>
+The solution to both these problems is field analysis. For the biography field, you can tell FlexSearch how to break apart the biography into words. You can tell FlexSearch that you want to make all the words lower case, and you can tell FlexSearch to remove accents marks. Field analysis is an important part of a field type.
+</p>
+..
+
+Resource-Parameter: 
++IndexName : string, , Name of the index
+
+
+Uri: POST document/create
+------------------------------------------------------------------
+Uri-Description:
+Create a new doument in the index.
+..
+
+Uri-Note:
+This will alway create a new document even if it already exists.
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Request to create a new document in an index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Fields":{"firstname":"jhon", "lastname":"doe"},"Id":"1","IndexName":"test"}
+..
+
+Uri: POST document/show
+------------------------------------------------------------------
+Uri-Description:
+Retrieve an existing document from the index using the id 
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Request to get a document from the index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Id":"1","IndexName":"test"}
+..
+
+Uri: POST document/update
+------------------------------------------------------------------
+Uri-Description:
+Update an existing doument in the index.
+..
+
+Uri-Note:
+This will create a new document if the document does not exist. It is better to use create api for document creation when creating a huge number of documents.
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Request to update an existing document in an index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Fields":{"firstname":"jhon", "lastname":"shephard"},"Id":"1","IndexName":"test"}
+..
+
+Example: Updating an non-existing document creates it
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Fields":{"firstname":"jhon", "lastname":"shephard"},"Id":"2","IndexName":"test"}
+..
+
+Uri: POST document/destroy
+------------------------------------------------------------------
+Uri-Description:
+Delete an existing doument in the index.
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Request to delete an existing document in an index
+------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Id":"2","IndexName":"test"}
+..
+
+Example: Deleting an non-existing document in an index results in error
+------------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"Id":"3","IndexName":"test"}
+..
+
+
+------------------------------------------------------------------
+Resource: Analysis
+------------------------------------------------------------------
+Resource-Description: 
+In FlexSearch a document represents the basic unit of information which can be added or retrieved from the index. A document consists of several fields. A field represents the actual data to be indexed. In database analogy an index can be considered as a table while a document is a row of that table. Like a table a FlexSearch document requires a fix schema and all fields should have a field type.
+..
+
+Resource-Parameter: 
++IndexName : string, , Name of the index
+
+
+Uri: POST analysis/analyze
+------------------------------------------------------------------
+Uri-Description:
+Analysis service can be used to see the effect of a particualr analyzer on the input text stream.
+..
+
+Uri-Statuscodes :
+200: OK
+400: Bad Request
+500: Internal Server Error
+
+Example: Analyzing a simple string using standard analyzer
+------------------------------------------------------------------------
+Example-Headers:
+Content-Type: application/json
+Accept: application/json
+
+Example-Body:
+{"AnalyzerName":"standardanalyzer","Text":"Hello World."}
+..
+

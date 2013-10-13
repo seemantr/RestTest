@@ -4,222 +4,224 @@ open System.Collections.Generic
 open System.Linq
 open FParsec
 open System
+open RestSharp
 open RestTest.ViewEngine  
+open System.Text
+open System.Text.RegularExpressions
+open Newtonsoft.Json
       
 let (|StartsWith|_|) (tag: string) (value: string) =
-    if value.StartsWith(tag) then Some()
+    if value.StartsWith(tag, true, Globalization.CultureInfo.InvariantCulture) then Some()
     else None
 
 let (|InvariantEqual|_|) (cmp: string) (str:string)  = 
   if String.Compare(str, cmp, StringComparison.OrdinalIgnoreCase) = 0
     then Some() else None
 
-type Token = KeyGroup of string list | KeyValue of string * obj
+let getKey (line: string) =
+    if line.IndexOf(':') <> -1 then
+        line.Substring(0, line.IndexOf(":")).Trim()
+    else
+        failwithf "Expecting ':' in line %s" line
 
-let (<||>) p1 p2 = attempt (p1 |>> box) <|> attempt (p2 |>> box)
-let spc      = many (anyOf [' '; '\t']) 
-let lexeme s = pstring s .>> spc
-let lexemel s= pstring s .>> spaces
-let comment  = pchar '-' .>>. restOfLine false 
-let blanks   = skipMany ((comment <||> spc) .>> newline .>> spc) .>> spc
-let brace p  = between (lexemel "[") (lexemel "]") p
-let pbool    = (lexeme "true" >>% true) <|> (lexeme "false" >>% false)
-let pstr     = between (lexeme "\"") (lexeme "\"") (manySatisfy ((<>)'"'))
-let pdate' s = try preturn (DateTime.Parse (s, null, Globalization.DateTimeStyles.RoundtripKind)) with _ -> fail ""
-let pdate    = between spc spc (anyString 20) >>= pdate'
-let ary elem = brace (sepBy (elem .>> spaces) (lexemel ","))
-let pary     = ary pbool <||> ary pdate <||> ary pint32 <||> ary pstr <||> ary pfloat
-let value    = pbool <||> pdate <||> pstr <||> pfloat <||> pint32 <||> pary <||> ary pary
-let kvKey    = many1Chars (noneOf " \t\n:")
-let keyvalue = (kvKey .>> spc) .>>. (lexeme ":" >>. value) |>> KeyValue
-let kgKey    = (many1Chars (noneOf "\t\n].")) .>> spc
-let keygroup = blanks >>. brace (sepBy kgKey (lexeme ".")) |>> KeyGroup
-let document = blanks >>. many (keygroup <|> keyvalue .>> blanks)
+let getValue (line: string) =
+    if line.IndexOf(':') <> -1 then
+        line.Substring(line.IndexOf(":") + 1).Trim()
+    else
+        failwithf "Expecting ':' in line %s" line
 
-let getListFromValues values = unbox<Collections.List<string>> values
+let getValues (line: string) =
+    if line.IndexOf(':') <> -1 then
+        let line = line.Substring(line.IndexOf(':') + 1)
+        line.Split(',').ToList()
+    else
+        failwithf "Expecting ':' in line %s" line
 
-let parse text =
+let getMultiline (lines : string[]) (i : int) =
+    let mutable j = i
+    let sb = new StringBuilder() 
+    while j < lines.Count() && lines.[j].StartsWith("..") do
+        sb.AppendLine(lines.[j]) |> ignore
+        j <- j + 1
+    (sb.ToString(), j)
+
+let parse (text: string) =
+    let document = new List<(string * string * string)>()
     let rest = new RestDocument()
-    let currentKg = ref []
-    match run document text with
-    | Success(tokens,_,_) ->
-        for token in tokens do
-            match token with
-            | KeyGroup kg ->
-                currentKg := kg 
+
+    let mutable currentKey = ""
+    let mutable currentValue = new StringBuilder()
+    let mutable multiLineKey = false
+    let lines = text.Split([|"\r\n"|], StringSplitOptions.None)
+
+    for line in lines do
+        let line = line.Trim()
+        match line with
+        | StartsWith "-" -> ()
+        | "" -> ()
+
+        // Main section
+        | StartsWith "url" -> rest.Url <- getValue line
+        | StartsWith "name" -> rest.DocumentName <- getValue line
+        | StartsWith "version" -> rest.Version <- getValue line
+        | StartsWith "api_version" -> rest.ApiVersion <- getValue line
+        | StartsWith "response_format" -> rest.ResponseFormat <- getValues line
+        | StartsWith "request_format" -> rest.RequestFormat <- getValues line
+        | StartsWith "description" ->
+            multiLineKey <- true
+            currentKey <- "description" 
+            
+        // Resource Section
+        | StartsWith "resource-description" ->
+            multiLineKey <- true
+            currentKey <- "resource-description" 
+        
+        | StartsWith "resource-note" ->
+            multiLineKey <- true
+            currentKey <- "resource-note"               
+        
+        | StartsWith "resource-parameter" ->
+            multiLineKey <- false
+            currentKey <- "resource-parameter"
+
+        | StartsWith "resource" ->
+            let resource = new RestResource()
+            resource.ResourceName <- getValue line
+            rest.Resources.Add(resource)
+
+        // Uri Section
+        | StartsWith "uri-description" ->
+            multiLineKey <- true
+            currentKey <- "uri-description" 
+        
+        | StartsWith "uri-note" ->
+            multiLineKey <- true
+            currentKey <- "uri-note"
+                  
+        | StartsWith "uri-parameter" ->
+            multiLineKey <- false
+            currentKey <- "uri-parameter"
+        
+        | StartsWith "uri-statuscodes" ->
+            multiLineKey <- false
+            currentKey <- "uri-statuscodes"
+
+        | StartsWith "uri" ->
+            let uri = new ResourceUri()
+            uri.Name <- getValue line
+            uri.Method <-
+                match RestSharp.Method.TryParse(uri.Name.Substring(0, uri.Name.IndexOf(' '))) with
+                | (true, x) -> x
+                | _ -> failwithf "Unsupported request method in : '%s'" uri.Name
+                    
+            uri.Request <- uri.Name.Substring(uri.Name.IndexOf(' ')).Trim()
+            rest.Resources.Last().Uris.Add(uri)
+
+        // Example
+        | StartsWith "example-description" ->
+            multiLineKey <- true
+            currentKey <- "example-description" 
+        
+        | StartsWith "example-note" ->
+            multiLineKey <- true
+            currentKey <- "example-note"
+
+        | StartsWith "example-headers" ->
+            multiLineKey <- false
+            currentKey <- "example-headers"
+
+        | StartsWith "example-body" ->
+            multiLineKey <- true
+            currentKey <- "example-body"
+
+        | StartsWith "example" ->
+            let example = new ResourceExample()
+            example.Name <- getValue line
+            rest.Resources.Last().Uris.Last().Examples.Add(example)
+
+        | StartsWith ".." ->
+            if multiLineKey then
+                match currentKey with
+                | "description" -> 
+                    rest.DocumentDescription <- currentValue.ToString()
+                | "resource-description" -> 
+                    rest.Resources.Last().ResourceDescription <- currentValue.ToString()
+                | "resource-note" -> 
+                    rest.Resources.Last().Note <- currentValue.ToString()
+                | "uri-description" -> 
+                    rest.Resources.Last().Uris.Last().Description <- currentValue.ToString()
+                | "uri-note" -> 
+                    rest.Resources.Last().Uris.Last().Note <- currentValue.ToString()
+                | "example-description" -> 
+                    rest.Resources.Last().Uris.Last().Examples.Last().Description <- currentValue.ToString()
+                | "example-note" -> 
+                    rest.Resources.Last().Uris.Last().Examples.Last().Note <- currentValue.ToString()
+                | "example-body" -> 
+                    let body = Newtonsoft.Json.Linq.JObject.Parse(currentValue.ToString().Trim())
+                    rest.Resources.Last().Uris.Last().Examples.Last().Body <- body.ToString(Newtonsoft.Json.Formatting.Indented)
+                    
+                    let generateResponse = true
+                    if generateResponse then
+                        // Make the request
+                        let client = new RestClient(rest.Url)
+                        let request = new RestRequest(rest.Resources.Last().Uris.Last().Request, rest.Resources.Last().Uris.Last().Method)
+                        request.RequestFormat <- DataFormat.Json
+                    
+                        for req in rest.Resources.Last().Uris.Last().Examples.Last().Headers do
+                            request.AddHeader(req.Key, req.Value) |> ignore
+                        request.AddParameter("application/json", rest.Resources.Last().Uris.Last().Examples.Last().Body, ParameterType.RequestBody) |> ignore
+                    
+                        let result = client.Execute(request)
+                        if result.StatusCode = Net.HttpStatusCode.OK then
+                            let responseContent = Newtonsoft.Json.Linq.JObject.Parse(result.Content)
+                            result.Content <- responseContent.ToString(Newtonsoft.Json.Formatting.Indented)
+
+                        rest.Resources.Last().Uris.Last().Examples.Last().Response <- result
+                    
+                | _ -> failwithf "Unexpected '..'"
+
+                multiLineKey <- false
+                currentKey <- ""
+                currentValue.Clear() |> ignore
+        | _ ->
+            if multiLineKey then
+                currentValue.AppendLine(line) |> ignore
+            else
+                match currentKey with
+                | "resource-parameter" -> 
+                    let values = getValues line
+                    let param = new ResourceParam()
+                    param.Name <- getKey line
+                    if param.Name.StartsWith("+") then 
+                        param.Required <- true
+                        param.Name <- param.Name.Substring(1)
+
+                    param.DataType <- values.[0]
+                    param.DefaultValue <- values.[1]
+                    param.Description <- values.[2]
+                    rest.Resources.Last().Params.Add(param)
                 
-                match kg.Item(0) with
-                | StartsWith "RESOURCE_" -> ()
-                | StartsWith "RESOURCE" ->
-                    let resource = new RestResource()
-                    resource.ResourceName <- kg.Item(0).Substring(9)
-                    rest.Resources.Add(resource)
+                | "uri-parameter" -> 
+                    let values = getValues line
+                    let param = new ResourceParam()
+                    param.Name <- getKey line
+                    if param.Name.StartsWith("+") then param.Required <- true
+                    param.DataType <- values.[0]
+                    param.DefaultValue <- values.[1]
+                    param.Description <- values.[2]
+                    rest.Resources.Last().Uris.Last().ResourceParams.Add(param)
                 
-                | StartsWith "URI_" -> ()
-                   
-                | StartsWith "URI" ->
-                    let uri = new ResourceUri()
-                    uri.Name <- kg.Item(0).Substring(4)
-                    uri.Method <-
-                        match RestSharp.Method.TryParse(uri.Name.Substring(0, uri.Name.IndexOf(' '))) with
-                        | (true, x) -> x
-                        | _ -> failwithf "Unsupported request method in : '%s'" uri.Name
-                    
-                    uri.Request <- uri.Name.Substring(uri.Name.IndexOf(' ')).Trim()
-                    rest.Resources.Last().Uris.Add(uri)
-                    
-                | StartsWith "EXAMPLE" ->
-                    let resourceExample = new ResourceExample()
-                    resourceExample.Name <- kg.Item(0).Substring(8)
-                    rest.Resources.Last().Uris.Last().Examples.Add(resourceExample)
+                | "uri-statuscodes" ->
+                    rest.Resources.Last().Uris.Last().StatusCodes.Add(getKey line, getValue line)
 
-                | _ -> ()
-
-            | KeyValue (key,value) -> 
-                let currentKg = !currentKg
-                if currentKg.Any() then
-                    match currentKg.[0] with
-
-                    | StartsWith "RESOURCE_PARAMETERS" ->
-                        let values = getListFromValues value
-                        let param = new ResourceParam()
-                        param.Name <- key
-                        if key.StartsWith("+") then param.Required <- true
-                        param.DataType <- values.[0]
-                        param.DefaultValue <- values.[1]
-                        param.Description <- values.[2]
-                        rest.Resources.Last().Params.Add(param)
-
-                    | StartsWith "RESOURCE" ->
-                        match key with
-                        | "description" -> rest.Resources.Last().ResourceDescription <- unbox<string> value
-                        | "note" -> rest.Resources.Last().Note <- unbox<string> value
-                        | _ -> ()
-                    
-                    | StartsWith "URI_PARAMETERS" ->
-                        let values = getListFromValues value
-                        let param = new ResourceParam()
-                        param.Name <- key
-                        if key.StartsWith("+") then param.Required <- true
-                        param.DataType <- values.[0]
-                        param.DefaultValue <- values.[1]
-                        param.Description <- values.[2]
-                        rest.Resources.Last().Uris.Last().ResourceParams.Add(param)
-                    
-                    | StartsWith "STATUS_CODES" ->
-                        rest.Resources.Last().Uris.Last().StatusCodes.Add(key, unbox<string> value)
-
-                    | StartsWith "URI" ->
-                        match key with
-                        | "description" -> rest.Resources.Last().Uris.Last().Description <- unbox<string> value
-                        | "note" -> rest.Resources.Last().Uris.Last().Note <- unbox<string> value
-                        | _ -> ()
-                    
-                    | StartsWith "EXAMPLE" ->
-                        match key with
-                        | "description" -> rest.Resources.Last().Uris.Last().Examples.Last().Description <- unbox<string> value
-                        | "note" -> rest.Resources.Last().Uris.Last().Examples.Last().Note <- unbox<string> value
-                        | _ -> ()
-                    
-                    | StartsWith "HEADERS" ->
-                        rest.Resources.Last().Uris.Last().Examples.Last().Headers.Add(key, unbox<string> value)
-
-                    | StartsWith "PARAMETER" ->
-                        match key with
-                        | "body" -> 
-                            rest.Resources.Last().Uris.Last().Examples.Last().Body <- unbox<string> value
-                        | _ -> rest.Resources.Last().Uris.Last().Examples.Last().QueryParams.Add(key, unbox<string> value) 
-
-                    | StartsWith "ASSERTS" ->
-                        let test = new Assert()
-                        test.AssertType <- 
-                            match AssertType.TryParse(key, true) with
-                            | (true, x)-> x
-                            | _ -> failwithf "Undefied assert condition: %s" key
-                        test.Values.AddRange(getListFromValues value)
-                        rest.Resources.Last().Uris.Last().Examples.Last().Asserts.Add(test)
-                    | _ -> ()
-                else
-                    // Pair belongs to the top level resource 
-                    match key with
-                    | "url" -> rest.Url <- unbox<string> value
-                    | "name" -> rest.DocumentName <- unbox<string> value
-                    | "description" -> rest.DocumentDescription <- unbox<string> value
-                    | "version" -> rest.Version <- unbox<string> value
-                    | "api_version" -> rest.ApiVersion <- unbox<string> value
-                    | "response_format" -> 
-                        rest.ResponseFormat.AddRange(getListFromValues value)
-
-                    | "request_format" -> 
-                        rest.RequestFormat.AddRange(getListFromValues value)
-                    | _ -> ()
-
-    | Failure(a, b, c) -> 
-        Console.WriteLine(a)
-        Console.WriteLine(b)
-        Console.WriteLine(c)
-    
+                | "example-headers" ->
+                    rest.Resources.Last().Uris.Last().Examples.Last().Headers.Add(getKey line, getValue line)
+                | _ -> ()                           
     rest
-
-let example = """
-url : "http://localhost:9800"
-name : "FlexSearch API documentation"
-description : "
-FlexSearch is a high performance REST/SOAP services based full-text searching platform built on top of the popular Lucene search library. At its core it is about extensibility and maintainability with minimum overhead. FlexSearch is written in F# & C# 5.0 (.net framework 4.5). It exposes REST, SOAP and Binary based web service endpoints enabling easy integration. It has an extensive plug-in architecture with ability to customize most of the functionality with minimum amount of efforts. One area where Lunar particularly excel over competition is providing easy extensible connector model which allows a developer to tap directly into core’s indexing engine, thus avoiding the reliance on web services. This results in a greatly improved indexing performance when indexing over millions of records.
-"
-version: "0.2.1"
-api_version: "1.0"
-response_format : ["XML", "JSON"]
-request_format : ["XML, JSON"]
-
-[RESOURCE Document]
-description : "Creates a new index"
--note : "Use with care"
-
-[RESOURCE_PARAMETERS] 
-OpenIndex : ["int", "default", "open the newly created index"]
-CloseIndex : ["int", "default", "open the newly created index"]
-
-[URI POST resource/{id}/{user}]
-
-description : "Creates a new index"
-note : "Use with care"
-
-[URI_PARAMETERS] 
-OpenIndex : ["int", "default", "open the newly created index"]
-CloseIndex : ["int", "default", "open the newly created index"]
-
-[STATUS_CODES]
-200 : "OK"
-400 : "Invalid word supplied"
-
-[EXAMPLE Create a simple index]
-
-description : "Creates a new index"
-note : "Use with care"
-
-[HEADERS]
-content-type: "text/json"
-Accept-Encoding: "gzip, deflate"
-Accept-Language: "en-GB"
-
-[PARAMETER]
-id: "23"
-user: "abc"
-
-body : "
-{
-'firstname':'test'
-}"
-
-[ASSERTS]
-deepEquals: ["abc", "{ 'firstname':'test' }"]
-equals: ["abc" , "dsdsd"]
-exists: ["abc"]
-"""
-
-
+                  
 let test() =
-    let result = parse example
+   
+    let result = parse(System.IO.File.ReadAllText("F:\\GitHub\Sample RestTest.txt"))
+
     RestTest.ViewEngine.Hepler.RenderHtml(result)
     Console.ReadLine() |> ignore
